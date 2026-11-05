@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/ai.js": {
+      "maxDuration": 60,
+      "includeFiles": "{data.json,lib/prompts.js}"
+    },
+    "api/break.js": {
+      "maxDuration": 30,
+      "includeFiles": "lib/break.js"
+    }
+  },
+  "cleanUrls": true
+}

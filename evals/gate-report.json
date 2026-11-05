@@ -1,0 +1,490 @@
+{
+ "pass": 62,
+ "n": 62,
+ "rows": [
+  {
+   "id": "fund-name",
+   "want": "block",
+   "check": "advice",
+   "ok": true,
+   "failed": [
+    "advice"
+   ]
+  },
+  {
+   "id": "best-fund",
+   "want": "block",
+   "check": "advice",
+   "ok": true,
+   "failed": [
+    "advice"
+   ]
+  },
+  {
+   "id": "switch-fd",
+   "want": "block",
+   "check": "advice",
+   "ok": true,
+   "failed": [
+    "advice"
+   ]
+  },
+  {
+   "id": "returns-promise",
+   "want": "block",
+   "check": "advice",
+   "ok": true,
+   "failed": [
+    "advice"
+   ]
+  },
+  {
+   "id": "you-should-invest",
+   "want": "block",
+   "check": "advice",
+   "ok": true,
+   "failed": [
+    "advice"
+   ]
+  },
+  {
+   "id": "fomo",
+   "want": "block",
+   "check": "tone",
+   "ok": true,
+   "failed": [
+    "tone"
+   ]
+  },
+  {
+   "id": "urgency",
+   "want": "block",
+   "check": "tone",
+   "ok": true,
+   "failed": [
+    "tone"
+   ]
+  },
+  {
+   "id": "regret",
+   "want": "block",
+   "check": "tone",
+   "ok": true,
+   "failed": [
+    "tone"
+   ]
+  },
+  {
+   "id": "hinglish-fear",
+   "want": "block",
+   "check": "tone",
+   "ok": true,
+   "failed": [
+    "tone"
+   ]
+  },
+  {
+   "id": "number-digit",
+   "want": "block",
+   "check": "numbers",
+   "ok": true,
+   "failed": [
+    "numbers"
+   ]
+  },
+  {
+   "id": "number-word",
+   "want": "block",
+   "check": "numbers",
+   "ok": true,
+   "failed": [
+    "numbers"
+   ]
+  },
+  {
+   "id": "number-hindi",
+   "want": "block",
+   "check": "numbers",
+   "ok": true,
+   "failed": [
+    "numbers"
+   ]
+  },
+  {
+   "id": "claim-en",
+   "want": "block",
+   "check": "claims",
+   "ok": true,
+   "failed": [
+    "claims"
+   ]
+  },
+  {
+   "id": "claim-hinglish",
+   "want": "block",
+   "check": "claims",
+   "ok": true,
+   "failed": [
+    "claims",
+    "language"
+   ]
+  },
+  {
+   "id": "claim-hindi",
+   "want": "block",
+   "check": "claims",
+   "ok": true,
+   "failed": [
+    "claims"
+   ]
+  },
+  {
+   "id": "fake-rule",
+   "want": "block",
+   "check": "citations",
+   "ok": true,
+   "failed": [
+    "citations"
+   ]
+  },
+  {
+   "id": "uncited-rule",
+   "want": "block",
+   "check": "citations",
+   "ok": true,
+   "failed": [
+    "citations"
+   ]
+  },
+  {
+   "id": "wrong-lang",
+   "want": "block",
+   "check": "language",
+   "ok": true,
+   "failed": [
+    "language"
+   ]
+  },
+  {
+   "id": "mislabelled-lang",
+   "want": "block",
+   "check": "language",
+   "ok": true,
+   "failed": [
+    "language"
+   ]
+  },
+  {
+   "id": "advice-not-declined",
+   "want": "block",
+   "check": "decline",
+   "ok": true,
+   "failed": [
+    "decline"
+   ]
+  },
+  {
+   "id": "bad-intent",
+   "want": "block",
+   "check": "schema",
+   "ok": true,
+   "failed": [
+    "schema"
+   ]
+  },
+  {
+   "id": "bad-months",
+   "want": "block",
+   "check": "schema",
+   "ok": true,
+   "failed": [
+    "schema"
+   ]
+  },
+  {
+   "id": "empty",
+   "want": "block",
+   "check": "schema",
+   "ok": true,
+   "failed": [
+    "schema",
+    "language"
+   ]
+  },
+  {
+   "id": "too-long",
+   "want": "block",
+   "check": "schema",
+   "ok": true,
+   "failed": [
+    "schema"
+   ]
+  },
+  {
+   "id": "not-object",
+   "want": "block",
+   "check": "schema",
+   "ok": true,
+   "failed": [
+    "schema",
+    "language"
+   ]
+  },
+  {
+   "id": "amc-from-user-ok",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "decline-en",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "decline-hinglish",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "negated-advice",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "kind-en",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "kind-hinglish",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "kind-hindi",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "fallback-en",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "no-text-en",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "decline-default-en",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "fallback-hinglish",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "no-text-hinglish",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "decline-default-hinglish",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "fallback-hi",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "no-text-hi",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "decline-default-hi",
+   "want": "pass",
+   "check": null,
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "redact-1",
+   "want": "PAN",
+   "ok": true,
+   "failed": [
+    "PAN"
+   ]
+  },
+  {
+   "id": "redact-2",
+   "want": "phone",
+   "ok": true,
+   "failed": [
+    "phone"
+   ]
+  },
+  {
+   "id": "redact-3",
+   "want": "phone",
+   "ok": true,
+   "failed": [
+    "phone"
+   ]
+  },
+  {
+   "id": "redact-4",
+   "want": "phone",
+   "ok": true,
+   "failed": [
+    "phone"
+   ]
+  },
+  {
+   "id": "redact-5",
+   "want": "email",
+   "ok": true,
+   "failed": [
+    "email"
+   ]
+  },
+  {
+   "id": "redact-6",
+   "want": "UPI ID",
+   "ok": true,
+   "failed": [
+    "UPI ID"
+   ]
+  },
+  {
+   "id": "redact-7",
+   "want": "UPI ID",
+   "ok": true,
+   "failed": [
+    "UPI ID"
+   ]
+  },
+  {
+   "id": "redact-8",
+   "want": "account number",
+   "ok": true,
+   "failed": [
+    "account number"
+   ]
+  },
+  {
+   "id": "redact-9",
+   "want": "Aadhaar",
+   "ok": true,
+   "failed": [
+    "Aadhaar"
+   ]
+  },
+  {
+   "id": "redact-10",
+   "want": "nothing removed",
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "redact-11",
+   "want": "nothing removed",
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "redact-12",
+   "want": "nothing removed",
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "redact-13",
+   "want": "nothing removed",
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "redact-14",
+   "want": "nothing removed",
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "lang-1",
+   "want": "en",
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "lang-2",
+   "want": "hinglish",
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "lang-3",
+   "want": "hi",
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "lang-4",
+   "want": "hinglish",
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "lang-5",
+   "want": "en",
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "lang-6",
+   "want": "en",
+   "ok": true,
+   "failed": []
+  },
+  {
+   "id": "lang-7",
+   "want": "en",
+   "ok": true,
+   "failed": []
+  }
+ ]
+}

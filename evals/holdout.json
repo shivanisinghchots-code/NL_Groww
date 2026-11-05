@@ -1,0 +1,14 @@
+[
+ {"id":"h-rent","text":"landlord ne rent badha diya, kuch time ke liye SIP nahi chal payega","action":"skip","expect":{"intents":["cash_need_break"]}},
+ {"id":"h-wedding","text":"sister's wedding in Feb, I need to hold off on investing till March","action":"skip","expect":{"intents":["cash_need_break"]}},
+ {"id":"h-fees","text":"college fees due, can't spare the 2k for a couple of months","action":"skip","expect":{"intents":["cash_need_break"],"months":2}},
+ {"id":"h-tight","text":"ghar mein thoda tight chal raha hai abhi","action":"skip","expect":{"intents":["cash_need_break"]}},
+ {"id":"h-red","text":"everything is in red since I started, honestly feels pointless","action":"cancel","expect":{"intents":["market_or_returns_worry"]}},
+ {"id":"h-news","text":"saw on the news that Nifty fell 8%, kya band kar du?","action":"cancel","expect":{"intents":["market_or_returns_worry"]}},
+ {"id":"h-gold","text":"would gold be safer than this SIP right now?","action":"cancel","expect":{"intents":["fund_advice"]}},
+ {"id":"h-friend-fund","text":"my colleague is getting 30% in some fund, should I move there","action":"cancel","expect":{"intents":["fund_advice"]}},
+ {"id":"h-debit-twice","text":"money got debited twice this month for the same sip","action":"skip","expect":{"intents":["payment_problem"]}},
+ {"id":"h-payday","text":"paise 7 tareekh ko aate hai, SIP 3 ko katta hai","action":"change","expect":{"intents":["change_date"]}},
+ {"id":"h-more","text":"got a raise, want to put in more each month","action":"change","expect":{"intents":["change_amount"]}},
+ {"id":"h-done","text":"I'm done with mutual funds, closing everything","action":"cancel","expect":{"intents":["stop_permanently"]}}
+]

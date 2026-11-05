@@ -1,0 +1,5 @@
+{
+  "name": "sip-discovery-engine",
+  "private": true,
+  "engines": { "node": ">=18" }
+}
