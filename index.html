@@ -871,6 +871,10 @@ const checkNums = (text, extra) => { const bad = []; const html = esc(text).repl
   if (!ok) bad.push(m); return ok ? m : `<span class="unverified" title="Not found in the engine's stats">${m}</span>`; }); return { html, bad }; };
 let askCtl = null;
 $("#askStop").onclick = () => askCtl?.abort();
+// Called only once an answer card has rendered: the question is its heading, so the box is freed for a follow-up.
+// Stopped and failed requests deliberately leave the text in place so it can be retried without retyping.
+const clearAsk = q => { const i = $("#askInput"); i.placeholder = "Ask a follow-up question…";
+  if (i.value.trim() === q) i.value = ""; };          // if they started typing the next one mid-request, keep it
 const hitCard = e => `<div class="hit" id="hit-${esc(e.id)}"><div>${esc(e.q || e.x.slice(0, 260))}</div><div class="meta"><span>${esc(SRC[e.src] || e.src)}</span><span>·</span><span>${esc(e.date)}</span>${e.act && e.act !== "none" ? `<span class="tag dim">${esc(label(e.act))}</span>` : ""}<a href="${esc(e.url)}" target="_blank" rel="noopener">Source</a></div></div>`;
 $("#askForm").addEventListener("submit", async ev => {
   ev.preventDefault();
@@ -881,7 +885,7 @@ $("#askForm").addEventListener("submit", async ev => {
   if (ADVICE.test(q)) {
     $("#askAnswer").innerHTML = `<div class="panel" style="display:grid;gap:10px"><h2 style="font-size:22px">${esc(q)}</h2><p class="answer">This engine studies investor behaviour and doesn't give investment advice, so it won't suggest funds or stocks. For product information, see official sources such as the fund's scheme documents or AMFI.</p>
       <ul class="checks"><li><span class="mark ok">✓</span><span>Advice request detected before any AI call; declined</span></li></ul></div>`;
-    $("#askStatus").textContent = ""; return;
+    $("#askStatus").textContent = ""; clearAsk(q); return;
   }
   if (!hits.length) { $("#askStatus").textContent = "No coded posts match that question. Try other words, e.g. skip, mandate, first SIP, returns."; return; }
   if (!AI.ready || blocked) { $("#askStatus").textContent = "Showing keyword matches only. AI answers aren't available here right now."; return; }
@@ -915,7 +919,7 @@ $("#askForm").addEventListener("submit", async ev => {
       <div><div class="eyebrow" style="margin-bottom:6px">Answer checks</div><ul class="checks">${checks.map(([s, t]) => `<li><span class="mark ${s}">${s === "ok" ? "✓" : s === "no" ? "✕" : "!"}</span><span>${esc(t)}</span></li>`).join("")}</ul></div>
       <p class="mini">Generated from public posts for research. Not investment advice.</p></div>`;
     $("#copyAns").onclick = () => { const txt = $("#askAnswer .panel").innerText; navigator.clipboard?.writeText(txt).then(() => $("#copyAns").textContent = "Copied", () => $("#copyAns").textContent = "Select the text to copy"); };
-    $("#askStatus").textContent = "";
+    $("#askStatus").textContent = ""; clearAsk(q);
   } catch (e) {
     if (e?.code === "cancelled") $("#askStatus").textContent = "Stopped.";
     else { $("#askStatus").textContent = errCopy(e?.code) + " The retrieved posts are listed below."; if (BLOCKING.includes(e?.code)) blocked = true; }
