@@ -447,17 +447,27 @@ input[type=number]:focus { border-color: var(--green); outline: none; }
         notes.push({ kind: "warn", text: `${dueSoon[0].toUpperCase() + dueSoon.slice(1)} can't be skipped any more. Paying it keeps the in-a-row count at zero; if it fails, it counts as 1 missed${st.consecutive + 1 >= 3 ? " and would cancel the SIP" : ""}.`, rules: ["R3", "R2"] });
       if (want <= effSafe) {
         const back = addMonths(next, want + (skipWindowClosed ? 1 : 0));
+        const firstSkipped = skipWindowClosed ? addMonths(next, 1) : next;   // the instalment due now can't be skipped (R3)
         add({ id: "skip", primary: true,
-          title: (skipWindowClosed ? "Pay the one due now, then skip " : "Skip the next ") + (want === 1 ? (skipWindowClosed ? "the one after" : "instalment") : (skipWindowClosed ? "the next " : "") + want + " instalments"),
-          body: `Request one skip at a time; ask for the next one after the first skipped date passes. Your SIP stays active and restarts on its own around ${fmtDate(back)}.`,
-          rules: skipWindowClosed ? ["R3", "R1", "R2"] : ["R1", "R2"], reminder: fmtDate(addDays(back, -3)) });
+          title: skipWindowClosed
+            ? "Pay the one due now, then skip the next one" + (want > 1 ? ", one request at a time" : "")
+            : want === 1 ? "Skip the next instalment" : `Skip ${want} months, one request at a time`,
+          body: want > 1
+            ? `Groww lets you skip one instalment at a time. Skip the next one now (due ${fmtDate(firstSkipped)}); once that date has passed, request the next skip. Your SIP stays active and restarts on its own around ${fmtDate(back)}.`
+            : `Request one skip at a time; ask for the next one after the first skipped date passes. Your SIP stays active and restarts on its own around ${fmtDate(back)}.`,
+          rules: skipWindowClosed ? ["R3", "R1", "R2"] : ["R1", "R2"], reminder: fmtDate(addDays(back, -3)),
+          firstSkipDate: fmtDate(firstSkipped),
+          ...(want > 1 ? { nextSkipReminder: fmtDate(addDays(firstSkipped, 1)) } : {}) });
         add({ id: "lower", title: "Or lower the amount instead", body: "Keep investing a smaller amount during the break; change it back later. The minimum depends on the fund and is shown in the app.", rules: ["R8"] });
       } else {
         add({ id: "skip_partial", primary: true,
-          title: skipWindowClosed ? `Pay the one due now, skip the next ${effSafe}, then pay one`
-               : effSafe > 0 ? `Skip ${effSafe === 1 ? "1 instalment" : effSafe + " instalments"}, then pay one` : "Pay the next instalment, then skip",
+          title: skipWindowClosed ? "Pay the one due now, skip one at a time, then pay one"
+               : effSafe === 2 ? "Skip one now and one next month, then pay one"
+               : effSafe === 1 ? "Skip one now, then pay the next one"
+               : "Pay the next instalment, then skip",
           body: `This break would make ${inRow} skipped or missed in a row${!skipWindowClosed && st.consecutive ? ` (counting the ${st.consecutive} already missed)` : ""}, and 3 in a row cancels the SIP automatically. Paying one instalment in between (even at a lower amount) keeps it active.`,
-          rules: ["R2", "R1", "R8"], warn: true });
+          rules: ["R2", "R1", "R8"], warn: true,
+          firstSkipDate: fmtDate(skipWindowClosed || effSafe === 0 ? addMonths(next, 1) : next) });
         add({ id: "lower", title: "Lower the amount for the break", body: "Keep the SIP running at a smaller amount you can manage, then raise it again when things settle. The minimum depends on the fund and is shown in the app.", rules: ["R8"] });
         add({ id: "cancel_restart", title: "Cancel now and start a new SIP later", body: "Your invested money stays invested. A cancel can't be undone, but you can start a new SIP in the same fund later.", rules: ["R4", "R6", "R7"] });
       }
@@ -860,22 +870,43 @@ function optionCard(o, hero) {
   // the suggested card keeps the full consequence; the others show just the first sentence, so the list stays compact
   const body = hero ? o.body : firstSentence(o.body)[0];
   return `<article class="opt ${hero ? "hero" : ""} ${o.blocked ? "blocked" : ""}">${tag}<h4>${esc(o.title)}</h4><p class="${hero ? "" : "clamp2"}">${esc(body)}</p>
-    ${o.reminder ? `<span class="rem">Reminder to restart: <b>${esc(o.reminder)}</b></span>` : ""}
+    ${o.nextSkipReminder ? `<span class="rem">Next skip request: <b>${esc(o.nextSkipReminder)}</b></span>` : ""}
+    ${o.reminder ? `<span class="rem">Restarts around: <b>${esc(o.reminder)}</b></span>` : ""}
     <div class="foot">${o.reminder ? `<button type="button" data-ics="${esc(o.reminder)}">Add reminder</button>` : ""}<button type="button" class="choose" data-choose="${o.id}" ${o.blocked ? "disabled" : ""}>Choose</button></div>
     ${ruleChips(o.rules, o.id)}
   </article>`;
 }
-const DONE = {
-  skip: "In the app, this opens the skip request for the next instalment.", skip_partial: "In the app, this opens the skip request. Set a reminder to pay one instalment in between.",
-  lower: "In the app, this opens Edit SIP to change the amount.", amount: "In the app, this opens Edit SIP to change the amount.", date: "In the app, this opens Edit SIP to change the date.",
-  cancel_restart: "In the app, this opens Cancel SIP. You can start a new SIP in the same fund later.", cancel: "In the app, this opens Cancel SIP.",
-  paynow: "In the app, this opens Pay Now for the missed instalment.", autopay: "In the app, this opens AutoPay settings.",
-  keep: "Nothing changed. Your SIP continues as it is.", orig: "In the app, this continues to the screen you first tapped.",
-};
+const doneDate = () => nextDate({ day: "numeric", month: "short", year: "numeric" });
+/* the first instalment that can actually be skipped - not the one due inside the 2-day window (R3) */
+const skippableDate = () => { try { return currentPlan().options.find(o => o.id === "skip" || o.id === "skip_partial")?.firstSkipDate || null; } catch { return null; } };
+function doneCopy() {
+  const d = S.done || {}, nd = doneDate();
+  if (d.copy) return d.copy;                                   // caller supplied its own wording
+  if (d.id === "skip" || d.id === "skip_partial") return {
+    title: "Skip requested for your next instalment",
+    text: `This skips the instalment due ${d.firstSkip || nd}. Groww allows one skip at a time.`
+        + (d.nextSkip ? ` Request your next skip after that date. We'll remind you on ${d.nextSkip}.` : ""),
+  };
+  if (d.id === "orig") return ({
+    skip:   { title: "Opening skip request", text: `In the Groww app, you'd now confirm skipping the instalment due ${skippableDate() || nd}. Groww allows one skip at a time.` },
+    change: { title: "Opening Edit SIP", text: "In the Groww app, you'd now see the Edit SIP screen to change the amount or date." },
+    cancel: { title: "Opening Cancel SIP", text: "In the Groww app, you'd now confirm the cancellation. Money already invested stays invested." },
+  })[S.action] || { title: "Opening the next screen", text: "" };
+  return ({
+    lower:   { title: "Opening Edit SIP", text: "You'd now set a smaller monthly amount. You can raise it again later." },
+    amount:  { title: "Opening Edit SIP", text: "You'd now set a smaller monthly amount. You can raise it again later." },
+    date:    { title: "Opening Edit SIP", text: "You'd now pick a new SIP date, a few days after your salary." },
+    cancel_restart: { title: "Opening Cancel SIP", text: "Money already invested stays invested. You can start a new SIP in the same fund later." },
+    cancel:  { title: "Opening Cancel SIP", text: "Money already invested stays invested. You can start a new SIP in the same fund later." },
+    paynow:  { title: "Opening Pay Now", text: "You'd now pay the missed instalment." },
+    autopay: { title: "Opening AutoPay settings", text: "You'd now check your AutoPay status." },
+    keep:    { title: "Your SIP stays as it is", text: `Nothing changed. Your next instalment is due ${nd}.` },
+  })[d.id] || { title: d.title || "Done", text: "" };
+}
 function doneView() {
   return `<header class="top line"><button class="iconbtn" data-go="result" aria-label="Back">${I.back}</button><h1>Done</h1><button class="demo-btn" type="button" data-sheet="demo" aria-label="Demo settings">${I.gear} Demo</button></header>
-  <main class="view"><div class="done"><div class="tick" aria-hidden="true">${I.check}</div><h2>${esc(S.done.title)}</h2><p>${esc(DONE[S.done.id] || "")}</p>
-    ${S.done.reminder ? `<button class="btn outline" type="button" data-ics="${esc(S.done.reminder)}">Add a restart reminder (${esc(S.done.reminder)})</button>` : ""}
+  <main class="view"><div class="done"><div class="tick" aria-hidden="true">${I.check}</div><h2>${esc(doneCopy().title)}</h2><p>${esc(doneCopy().text)}</p>
+    ${S.done.nextSkip ? `<button class="btn outline" type="button" data-ics="${esc(S.done.nextSkip)}">Add reminder for next skip (${esc(S.done.nextSkip)})</button>` : ""}
     <button class="btn primary" type="button" data-go="detail">Back to SIP</button>
     <p class="small">Prototype: nothing on a real account was changed.</p></div></main>` + NAV;
 }
@@ -996,7 +1027,7 @@ document.addEventListener("click", e => {
   if (t.dataset.ics) { downloadICS(t.dataset.ics); return; }
   if (t.dataset.months) { S.months = +t.dataset.months; keepScroll(render); return; }
   if (t.dataset.rule) { const k = t.dataset.key, id = t.dataset.rule; S.openRule = S.openRule && S.openRule.key === k && S.openRule.id === id ? null : { key: k, id }; keepScroll(render); return; }
-  if (t.dataset.choose) { const o = currentPlan().options.find(x => x.id === t.dataset.choose); if (!o || o.blocked) return; S.done = { id: o.id, title: o.title, reminder: o.reminder }; S.view = "done"; render(); return; }
+  if (t.dataset.choose) { const o = currentPlan().options.find(x => x.id === t.dataset.choose); if (!o || o.blocked) return; S.done = { id: o.id, title: o.title, reminder: o.reminder, nextSkip: o.nextSkipReminder, firstSkip: o.firstSkipDate }; S.view = "done"; render(); return; }
   if (t.id === "keep") { S.done = { id: "keep", title: "Your SIP stays as it is" }; S.view = "done"; render(); return; }
   if (t.id === "orig") { S.done = { id: "orig", title: `Continuing to ${lower1(ACTIONS[S.action])}` }; S.view = "done"; render(); return; }
   if (t.id === "aboutBtn") { openSheet("about"); return; }
@@ -1016,7 +1047,9 @@ function bindSheet() {
   sh.querySelectorAll("[data-quick]").forEach(b => b.onclick = () => {
     if (b.dataset.quick === JUMP_CHIP) {   // no assistant needed: this is just an Edit SIP job
       if (S.busy) stop();
-      S.sheet = null; S.done = { id: "amount", title: "Change the amount" }; S.view = "done"; render(); return;
+      S.sheet = null; S.view = "done";
+      S.done = { id: "amount", copy: { title: "Opening Edit SIP", text: "You'd now set a new monthly amount. You can change it again later." } };
+      render(); return;
     }
     S.text = qToggle(S.text, b.dataset.quick); renderSheet();
     const m = $("#msg"); if (m) { m.focus(); m.setSelectionRange(m.value.length, m.value.length); }
