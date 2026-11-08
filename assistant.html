@@ -253,7 +253,6 @@ input[type=number]:focus { border-color: var(--green); outline: none; }
 /* shown under a reminder once it is set */
 .remset { display: grid; gap: 2px; }
 .remset .gcal { font-size: var(--fs-meta); font-weight: 600; color: var(--green-ink); text-decoration: underline; text-underline-offset: 2px; display: inline-flex; align-items: center; min-height: 40px; }
-.opt .remset { justify-items: end; text-align: right; }
 .done .remset { justify-items: center; text-align: center; }
 /* rule citations: de-emphasised 11px grey text at the bottom of a card, never competing with the button */
 .rulerow { display: flex; flex-wrap: wrap; gap: 0 6px; align-items: center; font-size: var(--fs-meta); color: var(--muted); margin: -8px 0 -10px; }
@@ -875,8 +874,6 @@ function resultView() {
 const REM_COPY = {
   restart: { toast: d => `Reminder set for ${d}. Groww will notify you before your SIP restarts.`,
              event: "SIP restarts soon", details: "Check your balance before the next SIP instalment." },
-  nextskip: { toast: d => `Reminder set for ${d}. Groww will notify you when you can request your next skip.`,
-              event: "Next SIP skip can be requested", details: "Groww allows one skip at a time. The next skip can be requested from this date." },
 };
 const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const remKey = (dateText, kind) => kind + "|" + dateText;
@@ -905,8 +902,7 @@ function optionCard(o, hero) {
   return `<article class="opt ${hero ? "hero" : ""} ${o.blocked ? "blocked" : ""}">${tag}<h4>${esc(o.title)}</h4><p class="${hero ? "" : "clamp2"}">${esc(body)}</p>
     ${o.nextSkipReminder ? `<span class="rem">Next skip request: <b>${esc(o.nextSkipReminder)}</b></span>` : ""}
     ${o.reminder ? `<span class="rem">Restarts around: <b>${esc(o.reminder)}</b></span>` : ""}
-    <div class="foot">${o.reminder ? remindBtn(o.reminder, "restart", "Add reminder") : ""}<button type="button" class="choose" data-choose="${o.id}" ${o.blocked ? "disabled" : ""}>Choose</button></div>
-    ${o.reminder ? remindNote(o.reminder, "restart") : ""}
+    <div class="foot"><button type="button" class="choose" data-choose="${o.id}" ${o.blocked ? "disabled" : ""}>Choose</button></div>
     ${ruleChips(o.rules, o.id)}
   </article>`;
 }
@@ -940,7 +936,7 @@ function doneCopy() {
 function doneView() {
   return `<header class="top line"><button class="iconbtn" data-go="result" aria-label="Back">${I.back}</button><h1>Done</h1><button class="demo-btn" type="button" data-sheet="demo" aria-label="Demo settings">${I.gear} Demo</button></header>
   <main class="view"><div class="done"><div class="tick" aria-hidden="true">${I.check}</div><h2>${esc(doneCopy().title)}</h2><p>${esc(doneCopy().text)}</p>
-    ${S.done.nextSkip ? remindBtn(S.done.nextSkip, "nextskip", `Add reminder for next skip (${S.done.nextSkip})`, "btn outline") + remindNote(S.done.nextSkip, "nextskip") : ""}
+    ${S.done.reminder ? remindBtn(S.done.reminder, "restart", `Set reminder for ${S.done.reminder}`, "btn outline") + remindNote(S.done.reminder, "restart") : ""}
     <button class="btn primary" type="button" data-go="detail">Back to SIP</button>
     <p class="small">Prototype: nothing on a real account was changed.</p></div></main>` + NAV;
 }
