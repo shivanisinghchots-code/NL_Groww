@@ -250,6 +250,11 @@ input[type=number]:focus { border-color: var(--green); outline: none; }
 .opt.hero .foot .choose { flex: 1; background: var(--green); color: #fff; border-color: var(--green); min-height: 44px; }
 .opt.hero .foot .choose:hover { background: var(--green-press); }
 .opt .foot button:disabled { border-color: var(--line); color: var(--disabled); background: var(--bg); }
+/* shown under a reminder once it is set */
+.remset { display: grid; gap: 2px; }
+.remset .gcal { font-size: var(--fs-meta); font-weight: 600; color: var(--green-ink); text-decoration: underline; text-underline-offset: 2px; display: inline-flex; align-items: center; min-height: 40px; }
+.opt .remset { justify-items: end; text-align: right; }
+.done .remset { justify-items: center; text-align: center; }
 /* rule citations: de-emphasised 11px grey text at the bottom of a card, never competing with the button */
 .rulerow { display: flex; flex-wrap: wrap; gap: 0 6px; align-items: center; font-size: var(--fs-meta); color: var(--muted); margin: -8px 0 -10px; }
 .inforow .rulerow, .banner .rulerow { margin: 0; }
@@ -638,7 +643,7 @@ const B = BreakCore, API = "/api/break";
 const ACTIONS = { skip: "Skip instalment", change: "Edit SIP", cancel: "Cancel SIP" };
 const DEFAULT_STATE = { consecutive: 0, daysToNext: 15, amount: 3000 };
 const S = { view: "sips", sheet: null, action: null, text: "", state: { ...DEFAULT_STATE }, noAI: false, live: null,
-            result: null, months: null, ctrl: null, busy: false, openRule: null, done: null };
+            result: null, months: null, ctrl: null, busy: false, openRule: null, done: null, reminders: {} };
 const CONT_LABEL = { skip: "Continue to skip", change: "Continue to edit SIP", cancel: "Continue to cancel" };
 const CONT_SHORT = { skip: "Continue to skip", change: "Continue to edit", cancel: "Continue to cancel" };
 const JUMP_CHIP = "Want to invest more";   // skips the assistant and goes straight to Edit SIP
@@ -865,6 +870,34 @@ function resultView() {
     ${origBlocked ? `<span class="small" style="text-align:center">Cancelling opens once the next instalment is paid (Groww rule R5).</span>` : ""}
   </div>`;
 }
+/* ---------- reminders (prototype: nothing is scheduled, nothing is downloaded)
+   The Google Calendar link is the only part a person can really act on, so it opens in a new tab. */
+const REM_COPY = {
+  restart: { toast: d => `Reminder set for ${d}. Groww will notify you before your SIP restarts.`,
+             event: "SIP restarts soon", details: "Check your balance before the next SIP instalment." },
+  nextskip: { toast: d => `Reminder set for ${d}. Groww will notify you when you can request your next skip.`,
+              event: "Next SIP skip can be requested", details: "Groww allows one skip at a time. The next skip can be requested from this date." },
+};
+const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const remKey = (dateText, kind) => kind + "|" + dateText;
+const remSet = (dateText, kind) => !!S.reminders[remKey(dateText, kind)];
+function gcalURL(dateText, kind) {                                  // "15 Jan 2027" -> all-day event on that date
+  const [dd, mm, yy] = String(dateText).split(" "), i = MON3.indexOf(mm), d = new Date(+yy, i, +dd);
+  if (i < 0 || isNaN(d)) return null;
+  const f = x => x.getFullYear() + String(x.getMonth() + 1).padStart(2, "0") + String(x.getDate()).padStart(2, "0");
+  const end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1), c = REM_COPY[kind];
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(c.event)}`
+       + `&dates=${f(d)}/${f(end)}&details=${encodeURIComponent(c.details)}`;
+}
+function remindBtn(dateText, kind, label, cls) {
+  const on = remSet(dateText, kind);
+  return `<button type="button"${cls ? ` class="${cls}"` : ""}${on ? " disabled" : ` data-remind="${esc(dateText)}" data-kind="${kind}"`}>${on ? "✓ Reminder set" : esc(label)}</button>`;
+}
+function remindNote(dateText, kind) {
+  if (!remSet(dateText, kind)) return "";
+  const u = gcalURL(dateText, kind);
+  return `<div class="remset">${u ? `<a class="gcal" href="${esc(u)}" target="_blank" rel="noopener">Also add to Google Calendar</a>` : ""}<span class="small">Prototype: no real notification is sent.</span></div>`;
+}
 function optionCard(o, hero) {
   const tag = o.blocked ? `<span class="tag no">Not available yet</span>` : hero ? `<span class="tag">Suggested for you</span>` : o.warn ? `<span class="tag no">Read this first</span>` : "";
   // the suggested card keeps the full consequence; the others show just the first sentence, so the list stays compact
@@ -872,7 +905,8 @@ function optionCard(o, hero) {
   return `<article class="opt ${hero ? "hero" : ""} ${o.blocked ? "blocked" : ""}">${tag}<h4>${esc(o.title)}</h4><p class="${hero ? "" : "clamp2"}">${esc(body)}</p>
     ${o.nextSkipReminder ? `<span class="rem">Next skip request: <b>${esc(o.nextSkipReminder)}</b></span>` : ""}
     ${o.reminder ? `<span class="rem">Restarts around: <b>${esc(o.reminder)}</b></span>` : ""}
-    <div class="foot">${o.reminder ? `<button type="button" data-ics="${esc(o.reminder)}">Add reminder</button>` : ""}<button type="button" class="choose" data-choose="${o.id}" ${o.blocked ? "disabled" : ""}>Choose</button></div>
+    <div class="foot">${o.reminder ? remindBtn(o.reminder, "restart", "Add reminder") : ""}<button type="button" class="choose" data-choose="${o.id}" ${o.blocked ? "disabled" : ""}>Choose</button></div>
+    ${o.reminder ? remindNote(o.reminder, "restart") : ""}
     ${ruleChips(o.rules, o.id)}
   </article>`;
 }
@@ -906,7 +940,7 @@ function doneCopy() {
 function doneView() {
   return `<header class="top line"><button class="iconbtn" data-go="result" aria-label="Back">${I.back}</button><h1>Done</h1><button class="demo-btn" type="button" data-sheet="demo" aria-label="Demo settings">${I.gear} Demo</button></header>
   <main class="view"><div class="done"><div class="tick" aria-hidden="true">${I.check}</div><h2>${esc(doneCopy().title)}</h2><p>${esc(doneCopy().text)}</p>
-    ${S.done.nextSkip ? `<button class="btn outline" type="button" data-ics="${esc(S.done.nextSkip)}">Add reminder for next skip (${esc(S.done.nextSkip)})</button>` : ""}
+    ${S.done.nextSkip ? remindBtn(S.done.nextSkip, "nextskip", `Add reminder for next skip (${S.done.nextSkip})`, "btn outline") + remindNote(S.done.nextSkip, "nextskip") : ""}
     <button class="btn primary" type="button" data-go="detail">Back to SIP</button>
     <p class="small">Prototype: nothing on a real account was changed.</p></div></main>` + NAV;
 }
@@ -1024,7 +1058,7 @@ document.addEventListener("click", e => {
   if (t.dataset.go) { S.view = t.dataset.go === "result" && !S.result ? "detail" : t.dataset.go; S.sheet = null; render(); return; }
   if (t.dataset.sheet) { openSheet(t.dataset.sheet); return; }
   if (t.dataset.act) { S.action = t.dataset.act; S.result = null; S.months = null; if (!S.text || S.lastAct !== S.action) S.text = ""; S.lastAct = S.action; openSheet("ask"); return; }
-  if (t.dataset.ics) { downloadICS(t.dataset.ics); return; }
+  if (t.dataset.remind) { setReminder(t.dataset.remind, t.dataset.kind); return; }
   if (t.dataset.months) { S.months = +t.dataset.months; keepScroll(render); return; }
   if (t.dataset.rule) { const k = t.dataset.key, id = t.dataset.rule; S.openRule = S.openRule && S.openRule.key === k && S.openRule.id === id ? null : { key: k, id }; keepScroll(render); return; }
   if (t.dataset.choose) { const o = currentPlan().options.find(x => x.id === t.dataset.choose); if (!o || o.blocked) return; S.done = { id: o.id, title: o.title, reminder: o.reminder, nextSkip: o.nextSkipReminder, firstSkip: o.firstSkipDate }; S.view = "done"; render(); return; }
@@ -1067,7 +1101,7 @@ function bindSheet() {
   const days = $("#days"); if (days) days.oninput = () => { S.state.daysToNext = +days.value; $("#daysV").textContent = S.state.daysToNext === 0 ? "today" : plural(S.state.daysToNext, "day"); S.state = B.normState(S.state); keepScroll(() => { $("#screen").innerHTML = ({ sips: sipsView, detail: detailView, result: resultView, done: doneView })[S.view](); }); };
   const amt = $("#amt"); if (amt) amt.onchange = () => { S.state.amount = +amt.value; S.state = B.normState(S.state); renderAll(); };
   const na = $("#noai"); if (na) na.onchange = () => { S.noAI = na.checked; toast(S.noAI ? "AI off: the rule-based reading will be used" : "AI on"); renderSheet(); };
-  const rs = $("#reset"); if (rs) rs.onclick = () => { if (S.busy) stop(); Object.assign(S, { view: "sips", sheet: null, action: null, text: "", state: { ...DEFAULT_STATE }, noAI: false, result: null, months: null, openRule: null }); render(); toast("Demo reset"); };
+  const rs = $("#reset"); if (rs) rs.onclick = () => { if (S.busy) stop(); Object.assign(S, { view: "sips", sheet: null, action: null, text: "", state: { ...DEFAULT_STATE }, noAI: false, result: null, months: null, openRule: null, reminders: {} }); render(); toast("Demo reset"); };
 }
 function renderAll() { S.state = B.normState(S.state); const keep = S.sheet; keepScroll(render); if (keep) { S.sheet = keep; } }
 
@@ -1085,15 +1119,10 @@ async function send() {
 }
 function stop() { reqId++; if (S.ctrl) S.ctrl.abort("user"); S.busy = false; if (S.sheet === "ask") renderSheet(); }
 
-function downloadICS(dateText) {
-  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], [dd, mm, yy] = String(dateText).split(" ");
-  const d = new Date(+yy, MON.indexOf(mm), +dd); if (isNaN(d) || MON.indexOf(mm) < 0) return;
-  const ymd = d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
-  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//SIP Break Assistant prototype//EN", "BEGIN:VEVENT", `UID:${Date.now()}@break-assistant`,
-    `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`, `DTSTART;VALUE=DATE:${ymd}`, "SUMMARY:SIP restarts soon",
-    "DESCRIPTION:Your SIP break ends soon. Check your balance before the next instalment.", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
-  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar" })); a.download = "sip-reminder.ics"; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000); toast("Reminder downloaded for " + dateText);
+function setReminder(dateText, kind) {
+  S.reminders[remKey(dateText, kind)] = true;
+  toast(REM_COPY[kind].toast(dateText));
+  if (S.view === "done") render(); else keepScroll(render);   /* keeps the option list where it was */
 }
 
 /* a window shorter than the phone scales the whole device instead of clipping it */
