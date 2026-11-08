@@ -252,7 +252,9 @@ input[type=number]:focus { border-color: var(--green); outline: none; }
 .opt .foot button:disabled { border-color: var(--line); color: var(--disabled); background: var(--bg); }
 /* shown under a reminder once it is set */
 .remset { display: grid; gap: 2px; }
-.remset .gcal { font-size: var(--fs-meta); font-weight: 600; color: var(--green-ink); text-decoration: underline; text-underline-offset: 2px; display: inline-flex; align-items: center; min-height: 40px; }
+.remset .rrow { font-size: var(--fs-meta); color: var(--muted); line-height: 1.5; }
+.remset .rrow b { font-weight: 600; color: var(--ink); }
+.remset .gcal { font-weight: 600; color: var(--green-ink); text-decoration: underline; text-underline-offset: 2px; display: inline-block; padding: 10px 0; }
 .done .remset { justify-items: center; text-align: center; }
 /* rule citations: de-emphasised 11px grey text at the bottom of a card, never competing with the button */
 .rulerow { display: flex; flex-wrap: wrap; gap: 0 6px; align-items: center; font-size: var(--fs-meta); color: var(--muted); margin: -8px 0 -10px; }
@@ -872,8 +874,10 @@ function resultView() {
 /* ---------- reminders (prototype: nothing is scheduled, nothing is downloaded)
    The Google Calendar link is the only part a person can really act on, so it opens in a new tab. */
 const REM_COPY = {
-  restart: { toast: d => `Reminder set for ${d}. Groww will notify you before your SIP restarts.`,
+  restart: { label: "Restart reminder", one: d => `Reminder set for ${d}. Groww will notify you before your SIP restarts.`,
              event: "SIP restarts soon", details: "Check your balance before the next SIP instalment." },
+  nextskip: { label: "Next skip request", one: d => `Reminder set for ${d}. Groww will notify you when you can request your next skip.`,
+              event: "Next SIP skip can be requested", details: "Groww allows one skip at a time. The next skip can be requested from this date." },
 };
 const MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const remKey = (dateText, kind) => kind + "|" + dateText;
@@ -886,14 +890,22 @@ function gcalURL(dateText, kind) {                                  // "15 Jan 2
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(c.event)}`
        + `&dates=${f(d)}/${f(end)}&details=${encodeURIComponent(c.details)}`;
 }
-function remindBtn(dateText, kind, label, cls) {
-  const on = remSet(dateText, kind);
-  return `<button type="button"${cls ? ` class="${cls}"` : ""}${on ? " disabled" : ` data-remind="${esc(dateText)}" data-kind="${kind}"`}>${on ? "✓ Reminder set" : esc(label)}</button>`;
+/* the Done screen's reminders: the chosen option's dates, each labelled for what it actually is */
+function doneReminders() {
+  const d = S.done || {}, list = [];
+  if (d.nextSkip) list.push({ date: d.nextSkip, kind: "nextskip" });
+  if (d.reminder) list.push({ date: d.reminder, kind: "restart" });
+  return list;
 }
-function remindNote(dateText, kind) {
-  if (!remSet(dateText, kind)) return "";
-  const u = gcalURL(dateText, kind);
-  return `<div class="remset">${u ? `<a class="gcal" href="${esc(u)}" target="_blank" rel="noopener">Also add to Google Calendar</a>` : ""}<span class="small">Prototype: no real notification is sent.</span></div>`;
+function doneRemindBlock() {
+  const list = doneReminders(); if (!list.length) return "";
+  const on = list.every(r => remSet(r.date, r.kind)), many = list.length > 1;
+  const label = on ? (many ? "✓ Reminders set" : "✓ Reminder set")
+                   : many ? "Set reminders" : `Set reminder for ${list[0].date}`;
+  const rows = list.map(r => { const u = on ? gcalURL(r.date, r.kind) : null;
+    return `<span class="rrow">${esc(REM_COPY[r.kind].label)}: <b>${esc(r.date)}</b>${u ? ` · <a class="gcal" href="${esc(u)}" target="_blank" rel="noopener">Add to Google Calendar</a>` : ""}</span>`; }).join("");
+  return `<button class="btn outline" type="button"${on ? " disabled" : ` data-remind-all="1"`}>${esc(label)}</button>
+    <div class="remset">${rows}</div>`;
 }
 function optionCard(o, hero) {
   const tag = o.blocked ? `<span class="tag no">Not available yet</span>` : hero ? `<span class="tag">Suggested for you</span>` : o.warn ? `<span class="tag no">Read this first</span>` : "";
@@ -901,7 +913,7 @@ function optionCard(o, hero) {
   const body = hero ? o.body : firstSentence(o.body)[0];
   return `<article class="opt ${hero ? "hero" : ""} ${o.blocked ? "blocked" : ""}">${tag}<h4>${esc(o.title)}</h4><p class="${hero ? "" : "clamp2"}">${esc(body)}</p>
     ${o.nextSkipReminder ? `<span class="rem">Next skip request: <b>${esc(o.nextSkipReminder)}</b></span>` : ""}
-    ${o.reminder ? `<span class="rem">Restarts around: <b>${esc(o.reminder)}</b></span>` : ""}
+    ${o.reminder ? `<span class="rem">Restart reminder: <b>${esc(o.reminder)}</b></span>` : ""}
     <div class="foot"><button type="button" class="choose" data-choose="${o.id}" ${o.blocked ? "disabled" : ""}>Choose</button></div>
     ${ruleChips(o.rules, o.id)}
   </article>`;
@@ -915,7 +927,7 @@ function doneCopy() {
   if (d.id === "skip" || d.id === "skip_partial") return {
     title: "Skip requested for your next instalment",
     text: `This skips the instalment due ${d.firstSkip || nd}. Groww allows one skip at a time.`
-        + (d.nextSkip ? ` Request your next skip after that date. We'll remind you on ${d.nextSkip}.` : ""),
+        + (d.nextSkip ? ` Request your next skip after ${d.firstSkip || nd}.` : ""),
   };
   if (d.id === "orig") return ({
     skip:   { title: "Opening skip request", text: `In the Groww app, you'd now confirm skipping the instalment due ${skippableDate() || nd}. Groww allows one skip at a time.` },
@@ -936,9 +948,9 @@ function doneCopy() {
 function doneView() {
   return `<header class="top line"><button class="iconbtn" data-go="result" aria-label="Back">${I.back}</button><h1>Done</h1><button class="demo-btn" type="button" data-sheet="demo" aria-label="Demo settings">${I.gear} Demo</button></header>
   <main class="view"><div class="done"><div class="tick" aria-hidden="true">${I.check}</div><h2>${esc(doneCopy().title)}</h2><p>${esc(doneCopy().text)}</p>
-    ${S.done.reminder ? remindBtn(S.done.reminder, "restart", `Set reminder for ${S.done.reminder}`, "btn outline") + remindNote(S.done.reminder, "restart") : ""}
+    ${doneRemindBlock()}
     <button class="btn primary" type="button" data-go="detail">Back to SIP</button>
-    <p class="small">Prototype: nothing on a real account was changed.</p></div></main>` + NAV;
+    <p class="small">Prototype: nothing on a real account was changed, and no real notification is sent.</p></div></main>` + NAV;
 }
 
 /* ---------- sheets */
@@ -1054,7 +1066,7 @@ document.addEventListener("click", e => {
   if (t.dataset.go) { S.view = t.dataset.go === "result" && !S.result ? "detail" : t.dataset.go; S.sheet = null; render(); return; }
   if (t.dataset.sheet) { openSheet(t.dataset.sheet); return; }
   if (t.dataset.act) { S.action = t.dataset.act; S.result = null; S.months = null; if (!S.text || S.lastAct !== S.action) S.text = ""; S.lastAct = S.action; openSheet("ask"); return; }
-  if (t.dataset.remind) { setReminder(t.dataset.remind, t.dataset.kind); return; }
+  if (t.dataset.remindAll) { setReminders(); return; }
   if (t.dataset.months) { S.months = +t.dataset.months; keepScroll(render); return; }
   if (t.dataset.rule) { const k = t.dataset.key, id = t.dataset.rule; S.openRule = S.openRule && S.openRule.key === k && S.openRule.id === id ? null : { key: k, id }; keepScroll(render); return; }
   if (t.dataset.choose) { const o = currentPlan().options.find(x => x.id === t.dataset.choose); if (!o || o.blocked) return; S.done = { id: o.id, title: o.title, reminder: o.reminder, nextSkip: o.nextSkipReminder, firstSkip: o.firstSkipDate }; S.view = "done"; render(); return; }
@@ -1115,10 +1127,13 @@ async function send() {
 }
 function stop() { reqId++; if (S.ctrl) S.ctrl.abort("user"); S.busy = false; if (S.sheet === "ask") renderSheet(); }
 
-function setReminder(dateText, kind) {
-  S.reminders[remKey(dateText, kind)] = true;
-  toast(REM_COPY[kind].toast(dateText));
-  if (S.view === "done") render(); else keepScroll(render);   /* keeps the option list where it was */
+function setReminders() {
+  const list = doneReminders(); if (!list.length) return;
+  list.forEach(r => { S.reminders[remKey(r.date, r.kind)] = true; });
+  toast(list.length > 1
+    ? `Reminders set. Groww will notify you on ${list.map(r => r.date).join(" and ")}.`
+    : REM_COPY[list[0].kind].one(list[0].date));
+  render();
 }
 
 /* a window shorter than the phone scales the whole device instead of clipping it */
